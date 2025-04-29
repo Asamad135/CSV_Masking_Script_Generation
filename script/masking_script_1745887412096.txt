@@ -1,9 +1,0 @@
-    course = course LOCALCM (
-        VALRULES M
-        DSTUSESSRC T
-        (
-                    course_id = course_id,
-                    "substr(course_name, 1, 4)" = course_name,
-                    department_id = department_id
-        )
-    )

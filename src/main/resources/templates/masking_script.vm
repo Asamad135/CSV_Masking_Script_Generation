@@ -6,25 +6,32 @@ CREATE CONV SAMAD.CONVERT
   CF //'archive.CF'//
   FORCEEDITTM Y DELCNTLFILE N
   LOCALTM (
-    SRCQUAL OPTIMSRC130.OPTIMSRC130  DESTQUAL OPTIMSRC130.OPTIMSRC130  VALRULES M UNUSEDOBJ Y SOLUTION 0
-    ( #foreach($table in $maskedTables)
+    SRCQUAL OPTIMSRC130.OPTIMSRC130 DESTQUAL OPTIMSRC130.OPTIMSRC130 VALRULES M UNUSEDOBJ Y SOLUTION 0
+    (
+#foreach($table in $maskedTables)
       $table.name = $table.name LOCALCM (
         VALRULES M
         DSTUSESSRC T
         (
 #foreach($col in $table.columns)
-          #set($maskFunc = $payloadTables.get($table.name).columnMaskingMap.get($col))
-          #if($maskFunc)
-            "$maskFunc" = $col#if($foreach.hasNext),#end
-          #else
-            $col = $col#if($foreach.hasNext),#end
-          #end
+#set($maskFunc = $payloadTables.get($table.name).columnMaskingMap.get($col))
+#if($maskFunc)
+  #if($maskFunc.startsWith("TRANS"))
+          "$maskFunc" = $col#if($foreach.hasNext),#end
+  #elseif($maskFunc == 'shuffle')
+          shuffle = $col#if($foreach.hasNext),#end
+  #else
+          $maskFunc = $col#if($foreach.hasNext),#end
+  #end
+#else
+          $col = $col#if($foreach.hasNext),#end
+#end
 #end
         )
-      )
+      )#if($foreach.hasNext),#end
 #end
 
-#foreach($table in $unmaskedTables)  ## Handle unmasked tables ##
+#foreach($table in $unmaskedTables)
       $table.name = $table.name#if($foreach.hasNext),#end
 #end
     )
@@ -43,24 +50,13 @@ CREATE CONV SAMAD.CONVERT
     AGETYPE NONE MULTIPLE 1 CALENDAR SAMPLE_AU PIVOT 30 INVALIDDATES N SKIPPEDDATES N
   )
   REPORT_OPTION (
-    RPTERROR F 
-    RPTSUMMARY F 
-    RPTINVALID F 
-    RPTSKIPPED F 
+    RPTERROR F
+    RPTSUMMARY F
+    RPTINVALID F
+    RPTSKIPPED F
     RPTMASKVERIFICATION F
   )
   CURRENCY_OPTION (
     DEFAULT SAMPLE
   )
-  COMPRESSFILE Y INCL_FILEATTACH N
-  CSVF (
-    FILEMACRO N 
-    ROWCNT(0) 
-    FILESIZE(0) 
-    NUMFILES(0)
-#foreach($table in $allTables)  ## For all tables to create OBJ entry ##
-    OBJ($table.name) PATH(//'0'//) ROWCNT(0) FILESIZE(0) NUMFILES(0)#if($foreach.hasNext),#end
-#end
-    OPTIONS( GENMDATA N FIELDDELIM(//','//) STRDELIM(//'0'//) ESCCHAR(//'0'//) LOBENABLED N NULLCHECK N )
-  )
-;
+  COMPRESSFILE Y INCL_FILEATTACH N;
