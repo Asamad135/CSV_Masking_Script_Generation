@@ -1,11 +1,6 @@
 package masking.function.demo.model;
 
 import java.util.List;
-
-
-
-
-
 public class TableMeta {
     private String name;
     private List<String> columns;

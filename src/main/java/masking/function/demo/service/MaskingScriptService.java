@@ -2,6 +2,7 @@ package masking.function.demo.service;
 
 import masking.function.demo.model.ColumnMasking;
 import masking.function.demo.model.MaskingInfo;
+import masking.function.demo.model.MaskingRequest;
 import masking.function.demo.model.TableMaskingInfo;
 import masking.function.demo.model.TableMeta;
 import masking.function.demo.util.DatabaseUtil;
@@ -26,17 +27,34 @@ public class MaskingScriptService {
     @Autowired
     private DatabaseUtil databaseUtil;
 
-    public String generateMaskingScript(List<TableMaskingInfo> maskingInfos) throws IOException {
+    public String generateMaskingScript(MaskingRequest request) throws IOException {
         // Fetch all business tables and columns
         List<TableMeta> allTables = databaseUtil.getAllBusinessTables();
 
-        // Build payloadTables map: tableName -> MaskingInfo (column -> maskingFunction)
+        // Build payloadTables map from request
         Map<String, MaskingInfo> payloadTables = new HashMap<>();
-        for (TableMaskingInfo info : maskingInfos) {
-            Map<String, String> columnMaskingMap = new HashMap<>();
-            for (ColumnMasking cm : info.getColumns()) {
-                columnMaskingMap.put(cm.getColumnName(), cm.getMaskingFunction());
+        for (TableMaskingInfo info : request.getTables()) {
+            // Convert the columns list to a map for easier lookup
+            Map<String, String> columnMaskingMap = info.getColumns().stream()
+                .collect(Collectors.toMap(
+                    ColumnMasking::getColumnName,
+                    ColumnMasking::getMaskingFunction
+                ));
+
+            // Get all columns for this table from database
+            List<String> allTableColumns = allTables.stream()
+                .filter(t -> t.getName().equals(info.getTableName()))
+                .findFirst()
+                .map(TableMeta::getColumns)
+                .orElse(new ArrayList<>());
+
+            // For columns not specified in the request, add them with identity mapping
+            for (String column : allTableColumns) {
+                if (!columnMaskingMap.containsKey(column)) {
+                    columnMaskingMap.put(column, column); // Identity mapping
+                }
             }
+
             MaskingInfo mi = new MaskingInfo();
             mi.setTableName(info.getTableName());
             mi.setColumnMaskingMap(columnMaskingMap);
@@ -59,8 +77,7 @@ public class MaskingScriptService {
         velocityEngine.init();
 
         VelocityContext context = new VelocityContext();
-        context.put("allTables", allTables);
-
+        context.put("request", request);
         context.put("maskedTables", maskedTables);
         context.put("unmaskedTables", unmaskedTables);
         context.put("payloadTables", payloadTables);

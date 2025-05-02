@@ -1,21 +1,21 @@
 ## Velocity Template for SQL Script Generation
 
-CREATE CONV SAMAD.CONVERT
-  SRCXF //'D:\Docs\Optim_Doc\Abdus Samad\Extract\Extract.csv'//
-  DESTXF //'D:\Docs\Optim_Doc\Abdus Samad\Extract\Extract1.csv'//
-  CF //'archive.CF'//
-  FORCEEDITTM Y DELCNTLFILE N
+CREATE CONV ${request.createCnv}
+  SRCXF //'${request.srcxf}'//
+  DESTXF //'${request.destxf}'//
+  CF //'${request.cf}'//
+  FORCEEDITTM ${request.forceEditTM} DELCNTLFILE ${request.delCntlFile}
   LOCALTM (
-    SRCQUAL OPTIMSRC130.OPTIMSRC130 DESTQUAL OPTIMSRC130.OPTIMSRC130 VALRULES M UNUSEDOBJ Y SOLUTION 0
+    SRCQUAL ${request.srcQual} DESTQUAL ${request.destQual} VALRULES ${request.valRules} UNUSEDOBJ ${request.unusedObj} SOLUTION ${request.solution}
     (
 #foreach($table in $maskedTables)
       $table.name = $table.name LOCALCM (
-        VALRULES M
-        DSTUSESSRC T
+        VALRULES ${request.valRules}
+        DSTUSESSRC ${request.dstUsesSrc}
         (
 #foreach($col in $table.columns)
 #set($maskFunc = $payloadTables.get($table.name).columnMaskingMap.get($col))
-#if($maskFunc)
+#if($maskFunc && $maskFunc != $col)
   #if($maskFunc.startsWith("TRANS"))
           "$maskFunc" = $col#if($foreach.hasNext),#end
   #elseif($maskFunc == 'shuffle')
@@ -36,27 +36,28 @@ CREATE CONV SAMAD.CONVERT
 #end
     )
     PROCEDURES (
-      SYSTEM.GET_TOP_10_AU_LASTNAME = SYSTEM.GET_TOP_10_AU_LASTNAME,
-      OPTIMDIR130.GET_TOP_10_SALES = OPTIMDIR130.GET_TOP_10_SALES,
-      GET_TOP_10_AU_LASTNAME = GET_TOP_10_AU_LASTNAME,
-      GET_10_SALES = GET_10_SALES
+#foreach($proc in ${request.procedures})
+      $proc#if($foreach.hasNext),#end
+#end
     )
   )
-  SHOWCURRENCY Y SHOWAGE Y
+  SHOWCURRENCY ${request.showCurrency} SHOWAGE ${request.showAge}
   FUNCTION_AGING (
-    AGETYPE NONE MULTIPLE 1 CALENDAR SAMPLE_AU PIVOT 30 INVALIDDATES N SKIPPEDDATES N
+    AGETYPE ${request.ageType} MULTIPLE ${request.multiple} CALENDAR ${request.calendar} PIVOT ${request.pivot} 
+    INVALIDDATES ${request.invalidDates} SKIPPEDDATES ${request.skippedDates}
   )
   GLOBAL_AGING (
-    AGETYPE NONE MULTIPLE 1 CALENDAR SAMPLE_AU PIVOT 30 INVALIDDATES N SKIPPEDDATES N
+    AGETYPE ${request.globalAgeType} MULTIPLE ${request.globalMultiple} CALENDAR ${request.globalCalendar} 
+    PIVOT ${request.globalPivot} INVALIDDATES ${request.globalInvalidDates} SKIPPEDDATES ${request.globalSkippedDates}
   )
   REPORT_OPTION (
-    RPTERROR F
-    RPTSUMMARY F
-    RPTINVALID F
-    RPTSKIPPED F
-    RPTMASKVERIFICATION F
+    RPTERROR ${request.rptError}
+    RPTSUMMARY ${request.rptSummary}
+    RPTINVALID ${request.rptInvalid}
+    RPTSKIPPED ${request.rptSkipped}
+    RPTMASKVERIFICATION ${request.rptMaskVerification}
   )
   CURRENCY_OPTION (
-    DEFAULT SAMPLE
+    DEFAULT ${request.currencyDefault}
   )
-  COMPRESSFILE Y INCL_FILEATTACH N;
+  COMPRESSFILE ${request.compressFile} INCL_FILEATTACH ${request.inclFileAttach};
