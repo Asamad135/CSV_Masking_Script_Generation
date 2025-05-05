@@ -1,0 +1,33 @@
+CREATE TM ${request.tmName}
+SRCQUAL ${request.srcQual} DESTQUAL ${request.destQual} SRCEXT //'${request.srcExt}'// SRCTYPE ${request.srcType} DESTDB ${request.destDb} DESTTYPE ${request.destType}
+VALRULES ${request.valRules} UNUSEDOBJ ${request.unusedObj} SOLUTION ${request.solution}
+(#foreach($table in $allTables)
+#set($tableName = $table.name.toUpperCase())
+#if($mappingTables.containsKey($tableName))
+#set($mapping = $mappingTables.get($tableName))
+#if($mapping.localCm)${tableName} = ${tableName} LOCALCM (
+VALRULES ${mapping.valRules}
+DSTUSESSRC ${mapping.dstUsesSrc}
+(#foreach($col in $table.columns)
+#if($mapping.columnMappings.containsKey($col.toUpperCase()))
+#set($mappingFunc = $mapping.columnMappings.get($col.toUpperCase()))
+#if($mappingFunc.startsWith("TRANS"))
+"${mappingFunc}" = ${col}#if($foreach.hasNext),
+#end
+#else
+${mappingFunc} = ${col}#if($foreach.hasNext),
+#end
+#end
+#else
+${col} = ${col}#if($foreach.hasNext),
+#end
+#end
+#end)
+)#else
+${tableName} = ${tableName}#end
+#else
+${tableName} = ${tableName}#end#if($foreach.hasNext),
+#end#end)
+PROCEDURES (#foreach($proc in $request.procedures)${proc} = ${proc}#if($foreach.hasNext),
+#end#end)
+;
